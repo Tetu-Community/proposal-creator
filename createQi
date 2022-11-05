@@ -1,0 +1,97 @@
+#!/usr/bin/env node
+
+const { request, gql } = require('graphql-request')
+const snapshot = require('@snapshot-labs/snapshot.js')
+const client = new snapshot.Client712('https://hub.snapshot.org')
+const ethers = require('ethers')
+const { Command } = require('commander')
+const delay = require('delay')
+
+const program = new Command()
+program.description('Create tetuQi gauge proposal')
+program.option('-d, --dry')
+program.parse()
+
+const GRAPHQL_ENDPOINT = 'https://hub.snapshot.org/graphql'
+const QIDAO_PROPOSAL_ID = '0x966ef5d3b93c5ec6dc420381e66e657b76fedc8b7746e4ed9b8fe7c96cde50d9'
+const POLYGON_SNAPSHOT_BLOCK_NUMBER = 35100153
+const START_UNIX = Math.floor((new Date('Nov 2 2022 07:00:00 UTC')).getTime() / 1000)
+const END_UNIX = Math.floor((new Date('Nov 5, 2022, 03:00:00 UTC')).getTime() / 1000)
+
+const TITLE = 'Reflect: QIP171: Vault Incentives Gauge (Round 22)'
+
+const BODY = `
+We will use this proposal result in the QiDAO Gauge vote.
+`.trim()
+
+async function getProposalChoices (proposalId) {
+  const proposalResp = await request(GRAPHQL_ENDPOINT, gql`
+    query {
+      proposals (
+        where: {
+          id: "${proposalId}"
+        }
+      ) {
+        id
+        title
+        body
+        choices
+        start
+        end
+        snapshot
+        state
+        scores
+        scores_by_strategy
+        scores_total
+        scores_updated
+        author
+        space {
+          id
+          name
+        }
+      }
+      }
+  `)
+
+  if (proposalResp.proposals.length === 0) return []
+
+  return proposalResp.proposals[0].choices
+}
+
+async function main () {
+  const choices = await getProposalChoices(QIDAO_PROPOSAL_ID)
+  if (!process.env.DEPLOYER_MNEMONIC) throw new Error('must set DEPLOYER_MNEMONIC')
+  const signer = ethers.Wallet.fromMnemonic(process.env.DEPLOYER_MNEMONIC, process.env.DEPLOYER_MNEMONIC_PATH || "m/44'/60'/0'/0/0")
+
+  try {
+    const proposal = {
+      space: 'tetu.eth',
+      type: 'weighted',
+      title: TITLE,
+      body: BODY,
+      choices,
+      start: START_UNIX,
+      end: END_UNIX,
+      snapshot: POLYGON_SNAPSHOT_BLOCK_NUMBER,
+      plugins: '{}',
+      app: 'snapshot',
+      discussion: '',
+      from: signer.address
+    }
+
+    if (program.opts().dry) {
+      console.log('Dry run, proposal below...')
+      console.log(proposal)
+    } else {
+      console.log(proposal)
+      console.log('About to create proposal in 5 seconds...')
+      await delay(5000)
+      const resp = await client.proposal(signer, signer.address, proposal)
+      console.log(resp)
+    }
+  } catch (err) {
+    console.log(err)
+  }
+}
+
+main()

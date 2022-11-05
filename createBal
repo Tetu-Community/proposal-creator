@@ -1,0 +1,196 @@
+#!/usr/bin/env node
+
+const axios = require('axios')
+const snapshot = require('@snapshot-labs/snapshot.js')
+const client = new snapshot.Client712('https://hub.snapshot.org')
+const ethers = require('ethers')
+const compact = require('lodash.compact')
+const { Command } = require('commander')
+const delay = require('delay')
+
+const program = new Command()
+program.description('Create tetubal gauge proposal')
+program.option('-d, --dry')
+program.parse()
+
+const POLYGON_SNAPSHOT_BLOCK_NUMBER = 35088563
+const START_UNIX = Math.floor((new Date('Nov 1 2022 17:00:00 UTC')).getTime() / 1000)
+const END_UNIX = Math.floor((new Date('Nov 14 2022 02:00:00 UTC')).getTime() / 1000)
+
+const TITLE = 'BRV-TEST 2: Ignore Me'
+
+// const TITLE = 'BRV-TEST: Gauge Weight for Week of 10th November 2022'
+
+// const BODY = `
+// This is the first of the TetuBal gauge weight votes on a new bi-weekly schedule to sync with other platforms.
+
+// The results of this vote be submitted to Balancer and will last for 2 weeks.
+
+// TetuBAL docs: https://docs.tetu.io/tetu-io/protocol/products#tetubal
+// TetuBAL: https://app.tetu.io/tetubal
+// `.trim()
+
+const BODY = 'Ignore this, just testing. Thanks for your understanding!'
+
+const GAUGE_TYPES = {
+  0: 'Liquidity Mining Committee',
+  1: 'veBAL',
+  2: 'Ethereum',
+  3: 'Polygon',
+  4: 'Arbitrum',
+  5: 'Optimism'
+}
+
+function getProvider (chain) {
+  const urlStr = process.env[`${chain.toUpperCase()}_RPC_HTTP`]
+  if (!urlStr) throw new Error(`no RPC provider for chain ${chain} found!`)
+  const u = new URL(urlStr)
+  return new ethers.providers.JsonRpcProvider({
+    url: u.origin + u.pathname,
+    user: u.username,
+    password: u.password
+  })
+}
+
+async function getGaugeDetails (gauge) {
+  const gaugeTypeId = parseInt(gauge.type.id, 10)
+
+  if (gaugeTypeId < 2) return
+
+  if (gaugeTypeId === 2) {
+    const contract = new ethers.Contract(
+      gauge.address,
+      [
+        'function name() external view returns (string)',
+        'function is_killed() external view returns (bool)'
+      ],
+      getProvider('mainnet')
+    )
+
+    const killed = await contract.is_killed()
+    if (killed) return
+
+    return {
+      name: await contract.name(),
+      address: gauge.address
+    }
+  } else {
+    const contract = new ethers.Contract(
+      gauge.address,
+      [
+        'function is_killed() external view returns (bool)',
+        'function getRecipient() external view returns (address)'
+      ],
+      getProvider('mainnet')
+    )
+
+    const killed = await contract.is_killed()
+    if (killed) return
+
+    const recipient = await contract.getRecipient()
+
+    const recipientContract = new ethers.Contract(
+      recipient,
+      [
+        'function reward_receiver() external view returns (address)'
+      ],
+      getProvider(GAUGE_TYPES[gaugeTypeId])
+    )
+
+    const rewardReceiver = await recipientContract.reward_receiver()
+
+    const rewardReceiverContract = new ethers.Contract(
+      rewardReceiver,
+      [
+        'function name() external view returns (string)'
+      ],
+      getProvider(GAUGE_TYPES[gaugeTypeId])
+    )
+
+    return {
+      name: await rewardReceiverContract.name(),
+      address: gauge.address
+    }
+  }
+}
+
+async function getGaugeChoices () {
+  const allGaugeDetails = []
+
+  const resp = await axios.post('https://api.thegraph.com/subgraphs/name/balancer-labs/balancer-gauges', {
+    query: `
+      query {
+        gauges (first:1000) {
+          id
+          address
+          type {
+            id
+          }
+        }
+      }
+    `
+  })
+
+  await Promise.all(resp.data.data.gauges.map(async function (g) {
+    const gd = await getGaugeDetails(g)
+    if (gd) allGaugeDetails.push(gd)
+  }))
+
+  return compact(allGaugeDetails.map(gaugeDetailsToChoice)).sort()
+}
+
+function gaugeDetailsToChoice (gaugeDetail) {
+  if (!gaugeDetail.name) return
+  const trimmedName = gaugeDetail.name
+    .replace('Balancer', '')
+    .replace('Deposit', '')
+    .replace('Gauge', '')
+    .replace('Reward', '')
+    .trim()
+  const truncatedAddr = gaugeDetail.address.substring(0, 8)
+  return `${trimmedName} (${truncatedAddr})`
+}
+async function main () {
+  const choices = await getGaugeChoices()
+
+  // always include tetu gauges first
+  choices.sort((a, b) => {
+    if (a.toLowerCase().includes('tetu')) return -1
+    return 1
+  })
+
+  if (!process.env.DEPLOYER_MNEMONIC) throw new Error('must set DEPLOYER_MNEMONIC')
+  const signer = ethers.Wallet.fromMnemonic(process.env.DEPLOYER_MNEMONIC, process.env.DEPLOYER_MNEMONIC_PATH || "m/44'/60'/0'/0/0")
+
+  try {
+    const proposal = {
+      space: 'tetubal.eth',
+      type: 'weighted',
+      title: TITLE,
+      body: BODY,
+      choices,
+      start: START_UNIX,
+      end: END_UNIX,
+      snapshot: POLYGON_SNAPSHOT_BLOCK_NUMBER,
+      plugins: '{}',
+      app: 'snapshot',
+      discussion: '',
+      from: signer.address
+    }
+
+    if (program.opts().dry) {
+      console.log('Dry run, proposal below...')
+      console.log(proposal)
+    } else {
+      console.log(proposal)
+      console.log('About to create proposal in 5 seconds...')
+      await delay(5000)
+      const resp = await client.proposal(signer, signer.address, proposal)
+      console.log(resp)
+    }
+  } catch (err) {
+    console.log(err)
+  }
+}
+
+main()
