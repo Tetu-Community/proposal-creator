@@ -13,24 +13,20 @@ program.description('Create tetubal gauge proposal')
 program.option('-d, --dry')
 program.parse()
 
-const POLYGON_SNAPSHOT_BLOCK_NUMBER = 35088563
-const START_UNIX = Math.floor((new Date('Nov 1 2022 17:00:00 UTC')).getTime() / 1000)
-const END_UNIX = Math.floor((new Date('Nov 14 2022 02:00:00 UTC')).getTime() / 1000)
+const POLYGON_SNAPSHOT_BLOCK_NUMBER = 35380656
+const START_UNIX = Math.floor((new Date('Nov 10 2022 17:00:00 UTC')).getTime() / 1000)
+const END_UNIX = Math.floor((new Date('Nov 15 2022 03:00:00 UTC')).getTime() / 1000)
 
-const TITLE = 'BRV-TEST 2: Ignore Me'
+const TITLE = 'BRV-007: Gauge Weight for Week of 10th November 2022'
 
-// const TITLE = 'BRV-TEST: Gauge Weight for Week of 10th November 2022'
+const BODY = `
+This is the first of the TetuBal gauge weight votes on a new bi-weekly schedule to sync with other platforms.
 
-// const BODY = `
-// This is the first of the TetuBal gauge weight votes on a new bi-weekly schedule to sync with other platforms.
+The results of this vote be submitted to Balancer and will last for 2 weeks.
 
-// The results of this vote be submitted to Balancer and will last for 2 weeks.
-
-// TetuBAL docs: https://docs.tetu.io/tetu-io/protocol/products#tetubal
-// TetuBAL: https://app.tetu.io/tetubal
-// `.trim()
-
-const BODY = 'Ignore this, just testing. Thanks for your understanding!'
+TetuBAL docs: https://docs.tetu.io/tetu-io/protocol/products#tetubal
+TetuBAL: https://app.tetu.io/tetubal
+`.trim()
 
 const GAUGE_TYPES = {
   0: 'Liquidity Mining Committee',
