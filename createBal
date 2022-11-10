@@ -67,6 +67,7 @@ async function getGaugeDetails (gauge) {
     if (killed) return
 
     return {
+      chain: 'Ethereum',
       name: await contract.name(),
       address: gauge.address
     }
@@ -104,6 +105,7 @@ async function getGaugeDetails (gauge) {
     )
 
     return {
+      chain: GAUGE_TYPES[gaugeTypeId],
       name: await rewardReceiverContract.name(),
       address: gauge.address
     }
@@ -144,7 +146,9 @@ function gaugeDetailsToChoice (gaugeDetail) {
     .replace('Reward', '')
     .trim()
   const truncatedAddr = gaugeDetail.address.substring(0, 8)
-  return `${trimmedName} (${truncatedAddr})`
+
+  // max length: 32 chars
+  return `${trimmedName.substring(0, 23)} (${truncatedAddr})`
 }
 async function main () {
   const choices = await getGaugeChoices()
