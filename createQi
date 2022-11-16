@@ -13,8 +13,8 @@ program.option('-d, --dry')
 program.parse()
 
 const GRAPHQL_ENDPOINT = 'https://hub.snapshot.org/graphql'
-const QIDAO_PROPOSAL_ID = '0xcea7fb6f57eb041895f44a37a3458d7dd0667b58598af725e916fd1613ec28cb'
-const POLYGON_SNAPSHOT_BLOCK_NUMBER = 15984709
+const QIDAO_PROPOSAL_ID = '0xfe28138e02dc2fa59ea40f325ea972eb7d03191121bac718b9cb95368c2617b8'
+const POLYGON_SNAPSHOT_BLOCK_NUMBER = 35692990
 const START_UNIX = Math.floor((new Date('Nov 16 2022 07:00:00 UTC')).getTime() / 1000)
 const END_UNIX = Math.floor((new Date('Nov 19, 2022, 03:00:00 UTC')).getTime() / 1000)
 
