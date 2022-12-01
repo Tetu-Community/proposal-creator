@@ -9,22 +9,13 @@ const delay = require('delay')
 
 const program = new Command()
 program.description('Create tetuQi gauge proposal')
+program.requiredOption('-p, --proposalId <string>')
 program.option('-d, --dry')
 program.parse()
 
 const GRAPHQL_ENDPOINT = 'https://hub.snapshot.org/graphql'
-const QIDAO_PROPOSAL_ID = '0xfe28138e02dc2fa59ea40f325ea972eb7d03191121bac718b9cb95368c2617b8'
-const POLYGON_SNAPSHOT_BLOCK_NUMBER = 35692990
-const START_UNIX = Math.floor((new Date('Nov 16 2022 07:00:00 UTC')).getTime() / 1000)
-const END_UNIX = Math.floor((new Date('Nov 19, 2022, 03:00:00 UTC')).getTime() / 1000)
 
-const TITLE = 'Reflect: QIP172: Vault Incentives Gauge (Round 23)'
-
-const BODY = `
-We will use this proposal result in the QiDAO Gauge vote.
-`.trim()
-
-async function getProposalChoices (proposalId) {
+async function getProposal (proposalId) {
   const proposalResp = await request(GRAPHQL_ENDPOINT, gql`
     query {
       proposals (
@@ -53,13 +44,13 @@ async function getProposalChoices (proposalId) {
       }
   `)
 
-  if (proposalResp.proposals.length === 0) return []
+  if (proposalResp.proposals.length === 0) throw new Error('proposal not found')
 
-  return proposalResp.proposals[0].choices
+  return proposalResp.proposals[0]
 }
 
 async function main () {
-  const choices = await getProposalChoices(QIDAO_PROPOSAL_ID)
+  const { title, choices, start, end, snapshot } = await getProposal(program.opts().proposalId)
   if (!process.env.DEPLOYER_MNEMONIC) throw new Error('must set DEPLOYER_MNEMONIC')
   const signer = ethers.Wallet.fromMnemonic(process.env.DEPLOYER_MNEMONIC, process.env.DEPLOYER_MNEMONIC_PATH || "m/44'/60'/0'/0/0")
 
@@ -67,12 +58,12 @@ async function main () {
     const proposal = {
       space: 'tetu.eth',
       type: 'weighted',
-      title: TITLE,
-      body: BODY,
+      title: `Reflect: ${title}`,
+      body: 'We will use this proposal result in the QiDAO Gauge vote.',
       choices,
-      start: START_UNIX,
-      end: END_UNIX,
-      snapshot: POLYGON_SNAPSHOT_BLOCK_NUMBER,
+      start,
+      end: end - 86400, // -1 day
+      snapshot: parseInt(snapshot, 10),
       plugins: '{}',
       app: 'snapshot',
       discussion: '',
