@@ -56,7 +56,7 @@ async function main () {
 
   try {
     const proposal = {
-      space: 'tetu.eth',
+      space: 'tetuqi.eth',
       type: 'weighted',
       title: `Reflect: ${title}`,
       body: 'We will use this proposal result in the QiDAO Gauge vote.',
