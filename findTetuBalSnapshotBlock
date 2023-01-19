@@ -70,6 +70,8 @@ async function main () {
       const totalSupply = await tetuBAL.totalSupply()
       const percent = tetuBALInLP.mul('100000000').div(totalSupply)
 
+      if (process.env.VERBOSE) console.log(`${blockNumber}: ${percent.toString()}`)
+
       if (percent.gt(highestPercent)) {
         highestPercent = percent
         bestBlock = blockNumber
