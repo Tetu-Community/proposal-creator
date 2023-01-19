@@ -13,7 +13,6 @@ program.parse()
 
 const BALANCER_VAULT = '0xBA12222222228d8Ba445958a75a0704d566BF2C8'
 const TETU_BAL_BPT_ID = '0xb797adfb7b268faeaa90cadbfed464c76ee599cd0002000000000000000005ba'
-// const TETU_BAL = '0x7fC9E0Aa043787BFad28e29632AdA302C790Ce33'
 
 async function main () {
   const provider = new ethers.providers.JsonRpcProvider(process.env.POLYGON_ARCHIVE_RPC_HTTP)
