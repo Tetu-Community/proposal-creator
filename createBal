@@ -17,6 +17,10 @@ const POLYGON_SNAPSHOT_BLOCK_NUMBER = 38589904
 const START_UNIX = Math.floor((new Date('Feb 2 2023 17:00:00 UTC')).getTime() / 1000)
 const END_UNIX = Math.floor((new Date('Feb 7 2023 03:00:00 UTC')).getTime() / 1000)
 
+const HIDDEN_GAUGES = [
+  '0x973fb174Cdf9b1652e4213125a186f66684D899c'
+]
+
 const TITLE = 'BRV-013: Gauge Weight for Week of 2nd February 2023'
 
 const BODY = `
@@ -128,6 +132,7 @@ async function getGaugeChoices () {
   })
 
   await Promise.all(resp.data.data.gauges.map(async function (g) {
+    if (HIDDEN_GAUGES.find(hg => hg.toLowerCase() === g.address.toLowerCase())) return
     const gd = await getGaugeDetails(g)
     if (gd) allGaugeDetails.push(gd)
   }))
@@ -157,9 +162,6 @@ async function main () {
     return 1
   })
 
-  if (!process.env.DEPLOYER_MNEMONIC) throw new Error('must set DEPLOYER_MNEMONIC')
-  const signer = ethers.Wallet.fromMnemonic(process.env.DEPLOYER_MNEMONIC, process.env.DEPLOYER_MNEMONIC_PATH || "m/44'/60'/0'/0/0")
-
   try {
     const proposal = {
       space: 'tetubal.eth',
@@ -172,14 +174,17 @@ async function main () {
       snapshot: POLYGON_SNAPSHOT_BLOCK_NUMBER,
       plugins: '{}',
       app: 'snapshot',
-      discussion: '',
-      from: signer.address
+      discussion: ''
     }
 
     if (program.opts().dry) {
       console.log('Dry run, proposal below...')
       console.log(proposal)
     } else {
+      if (!process.env.DEPLOYER_MNEMONIC) throw new Error('must set DEPLOYER_MNEMONIC')
+      const signer = ethers.Wallet.fromMnemonic(process.env.DEPLOYER_MNEMONIC, process.env.DEPLOYER_MNEMONIC_PATH || "m/44'/60'/0'/0/0")
+      proposal.from = signer.address
+
       console.log(proposal)
       console.log('About to create proposal in 5 seconds...')
       await delay(5000)
