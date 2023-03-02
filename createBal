@@ -13,9 +13,37 @@ program.description('Create tetubal gauge proposal')
 program.option('-d, --dry')
 program.parse()
 
-const POLYGON_SNAPSHOT_BLOCK_NUMBER = 39361875
-const START_UNIX = Math.floor((new Date('Feb 16 2023 17:00:00 UTC')).getTime() / 1000)
-const END_UNIX = Math.floor((new Date('Feb 21 2023 03:00:00 UTC')).getTime() / 1000)
+const POLYGON_SNAPSHOT_BLOCK_NUMBER = 39863100
+const START_UNIX = Math.floor((new Date('Mar 2 2023 17:00:00 UTC')).getTime() / 1000)
+const END_UNIX = Math.floor((new Date('Mar 7 2023 03:00:00 UTC')).getTime() / 1000)
+
+// keys must be lowercase
+const GAUGE_DETAILS_OVERRIDE = {
+  // https://forum.balancer.fi/t/bip-204-enable-bb-ag-wbtc-weth-usd-gauge-gnosis/4444/1
+  // asking solarcurve about this... why does it have the "Mainnet" gauge type/
+  '0x56a65cc666bfe538c5a031942369f6f63eb42240': {
+    chain: 'Gnosis',
+    name: 'bb-ag WBTC/WETH/USD'
+  },
+  '0x3fb2975e00b3dbb97e8315a5acbff6b38026fdf3': {
+    chain: 'Gnosis',
+    name: 'bb-ag-GNO/bb-ag-WETH'
+  },
+  '0xd27671f057e9e72751106fbfbbbb33827d986546': {
+    chain: 'Gnosis',
+    name: 'bb-ag-GNO/bb-ag-USD'
+  },
+  '0x25d6f29429bcccc129d1a3e2a5642c8b929bcc07': {
+    chain: 'Gnosis',
+    name: 'bb-ag-USD'
+  },
+
+  // no more name() function?
+  '0x56124eb16441a1ef12a4ccaeabdd3421281b795a': {
+    chain: 'Mainnet',
+    name: 'veLIT'
+  }
+}
 
 const HIDDEN_GAUGES = [
   '0x973fb174Cdf9b1652e4213125a186f66684D899c',
@@ -26,7 +54,7 @@ const HIDDEN_GAUGES = [
   '0xC9Cd2B2D8744eB1E5F224612Bd7DBe7BB7d99b5A'
 ]
 
-const TITLE = 'BRV-014: Gauge Weight for Week of 16th February 2023'
+const TITLE = 'BRV-015: Gauge Weight for Week of 2nd March 2023'
 
 const BODY = `
 The results of this vote be submitted to Balancer and will last for 2 weeks.
@@ -57,6 +85,14 @@ function getProvider (chain) {
 
 async function getGaugeDetails (gauge) {
   const gaugeTypeId = parseInt(gauge.type.id, 10)
+
+  const override = GAUGE_DETAILS_OVERRIDE[gauge.address.toLowerCase()]
+  if (override) {
+    return {
+      address: gauge.address,
+      ...override
+    }
+  }
 
   if (gaugeTypeId < 2) return
 
