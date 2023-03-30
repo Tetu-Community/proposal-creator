@@ -17,43 +17,6 @@ const POLYGON_SNAPSHOT_BLOCK_NUMBER = 40910000
 const START_UNIX = Math.floor((new Date('Mar 30 2023 17:00:00 UTC')).getTime() / 1000)
 const END_UNIX = Math.floor((new Date('Apr 4 2023 03:00:00 UTC')).getTime() / 1000)
 
-// keys must be lowercase
-const GAUGE_DETAILS_OVERRIDE = {
-  // https://forum.balancer.fi/t/bip-204-enable-bb-ag-wbtc-weth-usd-gauge-gnosis/4444/1
-  // asking solarcurve about this... why does it have the "Mainnet" gauge type/
-  '0x56a65cc666bfe538c5a031942369f6f63eb42240': {
-    chain: 'Gnosis',
-    name: 'bb-ag WBTC/WETH/USD'
-  },
-  '0x3fb2975e00b3dbb97e8315a5acbff6b38026fdf3': {
-    chain: 'Gnosis',
-    name: 'bb-ag-GNO/bb-ag-WETH'
-  },
-  '0xd27671f057e9e72751106fbfbbbb33827d986546': {
-    chain: 'Gnosis',
-    name: 'bb-ag-GNO/bb-ag-USD'
-  },
-  '0x25d6f29429bcccc129d1a3e2a5642c8b929bcc07': {
-    chain: 'Gnosis',
-    name: 'bb-ag-USD'
-  },
-
-  // no more name() function?
-  '0x56124eb16441a1ef12a4ccaeabdd3421281b795a': {
-    chain: 'Mainnet',
-    name: 'veLIT'
-  }
-}
-
-const HIDDEN_GAUGES = [
-  '0x973fb174Cdf9b1652e4213125a186f66684D899c',
-  '0xb34d43Ada4105Ff71e89b8B22a8B9562E78f01E3',
-  '0x285cBA395e3Acb82A42758638fA85da9936016a4',
-  '0x3d5F0520267FE92FFf52B847FAC3204554552f99',
-  '0xD9Ea099D62526e670aef2BD680599FC48c409f3c',
-  '0xC9Cd2B2D8744eB1E5F224612Bd7DBe7BB7d99b5A'
-]
-
 const TITLE = 'BRV-017: Gauge Weight for Week of 30th March 2023'
 
 const BODY = `
@@ -63,137 +26,20 @@ TetuBAL docs: https://docs.tetu.io/tetu-io/protocol/products#tetubal
 TetuBAL: https://app.tetu.io/tetubal
 `.trim()
 
-const GAUGE_TYPES = {
-  0: 'Liquidity Mining Committee',
-  1: 'veBAL',
-  2: 'Ethereum',
-  3: 'Polygon',
-  4: 'Arbitrum',
-  5: 'Optimism'
-}
-
-function getProvider (chain) {
-  const urlStr = process.env[`${chain.toUpperCase()}_RPC_HTTP`]
-  if (!urlStr) throw new Error(`no RPC provider for chain ${chain} found!`)
-  const u = new URL(urlStr)
-  return new ethers.providers.JsonRpcProvider({
-    url: u.origin + u.pathname,
-    user: u.username,
-    password: u.password
-  })
-}
-
-async function getGaugeDetails (gauge) {
-  const gaugeTypeId = parseInt(gauge.type.id, 10)
-
-  const override = GAUGE_DETAILS_OVERRIDE[gauge.address.toLowerCase()]
-  if (override) {
-    return {
-      address: gauge.address,
-      ...override
-    }
-  }
-
-  if (gaugeTypeId < 2) return
-
-  if (gaugeTypeId === 2) {
-    const contract = new ethers.Contract(
-      gauge.address,
-      [
-        'function name() external view returns (string)',
-        'function is_killed() external view returns (bool)'
-      ],
-      getProvider('mainnet')
-    )
-
-    const killed = await contract.is_killed()
-    if (killed) return
-
-    return {
-      chain: 'Ethereum',
-      name: await contract.name(),
-      address: gauge.address
-    }
-  } else {
-    const contract = new ethers.Contract(
-      gauge.address,
-      [
-        'function is_killed() external view returns (bool)',
-        'function getRecipient() external view returns (address)'
-      ],
-      getProvider('mainnet')
-    )
-
-    const killed = await contract.is_killed()
-    if (killed) return
-
-    const recipient = await contract.getRecipient()
-
-    const recipientContract = new ethers.Contract(
-      recipient,
-      [
-        'function reward_receiver() external view returns (address)'
-      ],
-      getProvider(GAUGE_TYPES[gaugeTypeId])
-    )
-
-    const rewardReceiver = await recipientContract.reward_receiver()
-
-    const rewardReceiverContract = new ethers.Contract(
-      rewardReceiver,
-      [
-        'function name() external view returns (string)'
-      ],
-      getProvider(GAUGE_TYPES[gaugeTypeId])
-    )
-
-    return {
-      chain: GAUGE_TYPES[gaugeTypeId],
-      name: await rewardReceiverContract.name(),
-      address: gauge.address
-    }
-  }
-}
-
 async function getGaugeChoices () {
-  const allGaugeDetails = []
-
-  const resp = await axios.post('https://api.thegraph.com/subgraphs/name/balancer-labs/balancer-gauges', {
-    query: `
-      query {
-        gauges (first:1000) {
-          id
-          address
-          type {
-            id
-          }
-        }
-      }
-    `
-  })
-
-  await Promise.all(resp.data.data.gauges.map(async function (g) {
-    if (HIDDEN_GAUGES.find(hg => hg.toLowerCase() === g.address.toLowerCase())) return
-    const gd = await getGaugeDetails(g)
-    if (gd) allGaugeDetails.push(gd)
-  }))
-
-  return compact(allGaugeDetails.map(gaugeDetailsToChoice)).sort()
+  const resp = await axios.get('https://raw.githubusercontent.com/balancer/frontend-v2/develop/src/data/voting-gauges.json')
+  return compact(resp.data.map(gaugeDetailsToChoice)).sort()
 }
 
-function gaugeDetailsToChoice (gaugeDetail) {
-  if (!gaugeDetail.name) return
-  const trimmedName = gaugeDetail.name
-    .replace('Balancer', '')
-    .replace('Deposit', '')
-    .replace('Gauge', '')
-    .replace('Reward', '')
-    .trim()
-  const truncatedAddr = gaugeDetail.address.substring(0, 8)
+function gaugeDetailsToChoice (d) {
+  if (d.isKilled) return
+
+  const truncatedAddr = d.address.substring(0, 8)
 
   // max length: 32 chars
-  return `${trimmedName.substring(0, 23)} (${truncatedAddr})`
+  return `${d.pool.symbol.trim().substring(0, 23)} (${truncatedAddr})`
 }
+
 async function main () {
   const choices = await getGaugeChoices()
 
