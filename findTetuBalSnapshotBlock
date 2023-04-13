@@ -57,6 +57,8 @@ async function main () {
 
   console.log(`Looking up balances for ${blockChoices.length} blocks, from ${startBlock} to ${endBlock}...`)
 
+  blockChoices.sort((a, b) => a > b ? 1 : -1)
+
   const chunks = chunk(blockChoices, 10)
   let highestPercent = ethers.BigNumber.from(0)
   let bestBlock
