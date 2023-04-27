@@ -13,11 +13,11 @@ program.description('Create tetubal gauge proposal')
 program.option('-d, --dry')
 program.parse()
 
-const POLYGON_SNAPSHOT_BLOCK_NUMBER = 41399011
-const START_UNIX = Math.floor((new Date('Apr 13 2023 19:00:00 UTC')).getTime() / 1000)
-const END_UNIX = Math.floor((new Date('Apr 18 2023 03:00:00 UTC')).getTime() / 1000)
+const POLYGON_SNAPSHOT_BLOCK_NUMBER = 41705797
+const START_UNIX = Math.floor((new Date('Apr 27 2023 19:00:00 UTC')).getTime() / 1000)
+const END_UNIX = Math.floor((new Date('May 2 2023 03:00:00 UTC')).getTime() / 1000)
 
-const TITLE = 'BRV-018: Gauge Weight for Week of 13th April 2023'
+const TITLE = 'BRV-019: Gauge Weight for Week of 27th April 2023'
 
 const BODY = `
 The results of this vote be submitted to Balancer and will last for 2 weeks.
