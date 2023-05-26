@@ -1,5 +1,9 @@
 ## Steps to create a new tetuBAL voting round:
 
+### Calculate best snapshot block number
+
+1. In the `tetu-io/tetu-strategies-matic` repository, edit constant and run `scripts/utils/the-best-block-for-snapshot.ts`.
+
 ### Create the snapshot vote
 
 1. Edit constants in `createBal` script
