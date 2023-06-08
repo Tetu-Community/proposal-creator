@@ -13,9 +13,9 @@ program.description('Create tetubal gauge proposal')
 program.option('-d, --dry')
 program.parse()
 
-const POLYGON_SNAPSHOT_BLOCK_NUMBER = 42584821
-const START_UNIX = Math.floor((new Date('May 25 2023 19:00:00 UTC')).getTime() / 1000)
-const END_UNIX = Math.floor((new Date('May 30 2023 03:00:00 UTC')).getTime() / 1000)
+const POLYGON_SNAPSHOT_BLOCK_NUMBER = 43205732
+const START_UNIX = Math.floor((new Date('Jun 08 2023 19:00:00 UTC')).getTime() / 1000)
+const END_UNIX = Math.floor((new Date('Jun 13 2023 03:00:00 UTC')).getTime() / 1000)
 
 // These gauges will be killed shortly:
 // https://forum.balancer.fi/t/bip-262-l2-gauge-migration/4661
@@ -64,7 +64,7 @@ const IGNORED_GAUGES = [
   '0x8d7d227746ee06d2532903d6ef1f69d80647c0e7'
 ]
 
-const TITLE = 'BRV-021: Gauge Weight for Week of 25th May 2023'
+const TITLE = 'BRV-022: Gauge Weight for Week of 8th June 2023'
 
 const BODY = `
 The results of this vote be submitted to Balancer and will last for 2 weeks.
